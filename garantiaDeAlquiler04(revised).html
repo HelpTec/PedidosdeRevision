@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotizador de Alquiler</title>
+    <style>
+        body {
+            background-color: white;
+            color: orange;
+            font-family: Arial, sans-serif;
+        }
+
+        form {
+            border: 2px solid orange;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        h1, h2, h3 {
+            color: orange;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+
+        input {
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: orange;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: darkorange;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cotizador de Alquiler</h1>
+    <form id="cotizadorForm">
+        <label for="alquiler">Valor del Alquiler:</label>
+        <input type="number" id="alquiler" required><br><br>
+        
+        <label for="expensas">Valor de Expensas:</label>
+        <input type="number" id="expensas" required><br><br>
+        
+        <label for="meses">Cantidad de Meses:</label>
+        <input type="number" id="meses" required><br><br>
+        
+        <label for="metros">Metros Cuadrados:</label>
+        <input type="number" id="metros" required><br><br>
+        
+        <button type="button" onclick="calcular()">Calcular</button>
+        <button type="button" onclick="exportarPDF()">Exportar a PDF</button>
+    </form>
+    
+    <h2>Resultados</h2>
+    <div id="resultado"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script>
+        const tabla = [
+            {metros: 40, asegurada: 20000000, contenido: 5000000, linderos: 2000000, cristales: 100000, anual: 21450, mensual: 1788},
+            {metros: 50, asegurada: 25000000, contenido: 6250000, linderos: 2000000, cristales: 100000, anual: 25575, mensual: 2131},
+            {metros: 60, asegurada: 30000000, contenido: 7500000, linderos: 2000000, cristales: 100000, anual: 29700, mensual: 2475},
+            {metros: 70, asegurada: 36000000, contenido: 9000000, linderos: 2000000, cristales: 100000, anual: 34650, mensual: 2888},
+            {metros: 80, asegurada: 43200000, contenido: 10800000, linderos: 2000000, cristales: 100000, anual: 40590, mensual: 3383},
+            {metros: 90, asegurada: 51840000, contenido: 12960000, linderos: 2000000, cristales: 100000, anual: 47718, mensual: 3977},
+            {metros: 100, asegurada: 62208000, contenido: 15552000, linderos: 2000000, cristales: 100000, anual: 56272, mensual: 4689},
+            {metros: 110, asegurada: 74649600, contenido: 18662400, linderos: 2000000, cristales: 100000, anual: 66536, mensual: 5545},
+            {metros: 120, asegurada: 89579520, contenido: 22394880, linderos: 2000000, cristales: 100000, anual: 78853, mensual: 6571},
+            {metros: 130, asegurada: 107495424, contenido: 26873856, linderos: 2000000, cristales: 100000, anual: 93634, mensual: 7803},
+            {metros: 150, asegurada: 128994509, contenido: 32248627, linderos: 2000000, cristales: 100000, anual: 111370, mensual: 9281}
+        ];
+
+        function calcular() {
+            const alquiler = parseFloat(document.getElementById('alquiler').value);
+            const expensas = parseFloat(document.getElementById('expensas').value);
+            const meses = parseInt(document.getElementById('meses').value);
+            const metros = parseInt(document.getElementById('metros').value);
+            const servicios = 100000;
+
+            const totalAlquiler = alquiler * meses;
+            const totalExpensas = expensas * meses;
+            const totalServicios = servicios * meses;
+
+            //las tasas de alquiler no se multiplicaban por los meses a alquilar como figura en el excel
+            const prima = totalAlquiler + totalExpensas + totalServicios;
+            const tasaAlquiler = totalAlquiler * 0.002*meses;
+            const tasaExpensas = totalExpensas * 0.002*meses;
+            const tasaServicios = totalServicios * 0.002*meses;
+            const tasaAsistenciaJuridica = prima * 0.0005*meses;
+            
+            //la formula de la tasa asegurada del excel divide el resultado por 12 y lo multiplica por los meses a alquilar
+            const fila = tabla.find(item => item.metros === metros);
+            const tasaAsegurada = ((fila.asegurada * 0.00064)/12)*meses;
+            const tasaContenido = ((fila.contenido * 0.00074)/12)*meses;
+            const tasaLinderos = ((fila.linderos * 0.0002)/12)*meses;
+            const tasaCristales = ((fila.cristales * 0.0455)/12)*meses;
+
+            //a la suma total le faltaba la tasaAsistenciaJuridica como ocurre en el excel
+            const garantiaAlquiler = tasaAlquiler + tasaExpensas + tasaServicios + tasaAsistenciaJuridica + tasaAsegurada + tasaContenido + tasaLinderos + tasaCristales;
+
+
+            const efectivo = garantiaAlquiler * 0.70;
+            const transferencia = garantiaAlquiler * 0.75;
+            const cuotas3 = garantiaAlquiler / 3;
+            const cuotas6 = garantiaAlquiler * 0.85 / 6;
+
+            const resultado = `
+                <p>Valor de la Garantía de Alquiler: $${garantiaAlquiler.toFixed(2)}</p>
+                <h3>Opciones de Pago:</h3>
+                <p>Efectivo (30% descuento): $${efectivo.toFixed(2)} (Ahorro: $${(garantiaAlquiler - efectivo).toFixed(2)})</p>
+                <p>Transferencia (25% descuento): $${transferencia.toFixed(2)} (Ahorro: $${(garantiaAlquiler - transferencia).toFixed(2)})</p>
+                <p>3 Cuotas: $${cuotas3.toFixed(2)} cada una (Sin descuento)</p>
+                <p>6 Cuotas (15% descuento): $${cuotas6.toFixed(2)} cada una (Ahorro: $${(garantiaAlquiler - cuotas6 * 6).toFixed(2)})</p>
+            `;
+
+            document.getElementById('resultado').innerHTML = resultado;
+        }
+
+        function exportarPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const resultado = document.getElementById('resultado').innerHTML;
+            doc.fromHTML(resultado, 10, 10);
+            doc.save('cotizacion.pdf');
+        }
+    </script>
+</body>
+</html>
